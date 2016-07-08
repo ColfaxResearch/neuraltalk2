@@ -205,7 +205,8 @@ function layer:sample_beam(imgs, opt)
           the top beam_size most likely sequences.
         ]]--
         local logprobsf = logprobs:float() -- lets go to CPU for more efficiency in indexing operations
-        ys,ix = torch.sort(logprobsf,2,true) -- sorted array of logprobs along each previous beam (last true = descending)
+--        ys,ix = torch.sort(logprobsf,2,true) -- sorted array of logprobs along each previous beam (last true = descending)
+        ys,ix = torch.topk(logprobsf,2,2,true,true)
         local candidates = {}
         local cols = math.min(beam_size,ys:size(2))
         local rows = beam_size
