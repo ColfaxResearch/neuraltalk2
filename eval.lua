@@ -1,3 +1,5 @@
+require 'walltime'
+local perf_timer = walltime();
 require 'torch'
 require 'nn'
 require 'nngraph'
@@ -87,13 +89,16 @@ else
   loader = DataLoaderRaw{folder_path = opt.image_folder, coco_json = opt.coco_json}
 end
 
+print(string.format("wtime require: %.2fs\n", 1*(walltime() - perf_timer)))
 -------------------------------------------------------------------------------
 -- Load the networks from model checkpoint
 -------------------------------------------------------------------------------
+perf_timer = walltime();
 local protos = checkpoint.protos
 protos.expander = nn.FeatExpander(opt.seq_per_img)
 protos.crit = nn.LanguageModelCriterion()
 protos.lm:createClones() -- reconstruct clones inside the language model
+print(string.format("wtime model: %.2fs\n", 1*(walltime() - perf_timer)))
 if opt.gpuid >= 0 then for k,v in pairs(protos) do v:cuda() end end
 
 -------------------------------------------------------------------------------
@@ -110,16 +115,21 @@ local function eval_split(split, evalopt)
   local loss_sum = 0
   local loss_evals = 0
   local predictions = {}
-  while true do
 
+  while true do
+    perf_timer = walltime();
     -- fetch a batch of data
     local data = loader:getBatch{batch_size = opt.batch_size, split = split, seq_per_img = opt.seq_per_img}
     data.images = net_utils.prepro(data.images, false, opt.gpuid >= 0) -- preprocess in place, and don't augment
     n = n + data.images:size(1)
+    print(string.format("wtime prepro: %.2fms\n", 1000*(walltime() - perf_timer)))
 
     -- forward the model to get loss
+    perf_timer = walltime();
     local feats = protos.cnn:forward(data.images)
+    print(string.format("wtime forward: %.2fms\n", 1000*(walltime() - perf_timer)))
 
+    perf_timer = walltime();
     -- evaluate loss if we have the labels
     local loss = 0
     if data.labels then
@@ -132,8 +142,14 @@ local function eval_split(split, evalopt)
 
     -- forward the model to also get generated samples for each image
     local sample_opts = { sample_max = opt.sample_max, beam_size = opt.beam_size, temperature = opt.temperature }
+    print(string.format("wtime opts: %.2fms\n", 1000*(walltime() - perf_timer)))
+    perf_timer = walltime();
     local seq = protos.lm:sample(feats, sample_opts)
+    print(string.format("wtime LSTM: %.2fms\n", 1000*(walltime() - perf_timer)))
+    perf_timer = walltime();
     local sents = net_utils.decode_sequence(vocab, seq)
+    print(string.format("wtime decode: %.2fms\n", 1000*(walltime() - perf_timer)))
+    perf_timer = walltime();
     for k=1,#sents do
       local entry = {image_id = data.infos[k].id, caption = sents[k]}
       if opt.dump_path == 1 then
@@ -158,15 +174,16 @@ local function eval_split(split, evalopt)
       print(string.format('evaluating performance... %d/%d (%f)', ix0-1, ix1, loss))
     end
 
+    print(string.format("wtime sent_loop: %.2fms\n", 1000*(walltime() - perf_timer)))
+    perf_timer = walltime();
+
     if data.bounds.wrapped then break end -- the split ran out of data, lets break out
     if num_images >= 0 and n >= num_images then break end -- we've used enough images
   end
-
   local lang_stats
   if opt.language_eval == 1 then
     lang_stats = net_utils.language_eval(predictions, opt.id)
   end
-
   return loss_sum/loss_evals, predictions, lang_stats
 end
 
