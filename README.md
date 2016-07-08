@@ -34,6 +34,10 @@ $ th eval.lua -model /path/to/model -image_folder /path/to/image/directory -num_
 
 This tells the `eval` script to run up to 512 images from the given folder, in batches.
 
+or just run the script:
+```bash
+sh cpu_benchmark.sh
+```
 ### License
 
 BSD License.
