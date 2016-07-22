@@ -18,7 +18,7 @@ $ yum install protobuf-devel protobuf-compiler
 $ luarocks install loadcaffe
 ```
 Download a pretrained checkpoint from the original author of NeuralTalk2:
-The pretrained checkpoint can be downloaded here: [pretrained checkpoint link](http://cs.stanford.edu/people/karpathy/neuraltalk2/checkpoint_v1.zip) (600MB). 
+The pretrained checkpoint can be downloaded here: [pretrained checkpoint link](http://cs.stanford.edu/people/karpathy/neuraltalk2/checkpoint_v1_cpu.zip) (600MB). 
 
 Download some pictures from COCO or where else you'd like:
 [COCO Download](http://mscoco.org/dataset/#download)
